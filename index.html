@@ -571,9 +571,18 @@ const LANES = [
   { id: 'prison', name: '狱友',   icon: '🔒', cls: 'prison', dir: '狱友'   },
 ];
 
+// 每个分路的默认英雄（首次访问时自动填充）
+const DEFAULT_POOLS = {
+  jungle: ['云中君','云缨','司马懿','娜可露露','嫦娥','暃','曜','李白','澜','百里玄策','铠','阿轲','雅典娜','露娜','韩信','马超'],
+  mid:    ['上官婉儿','不知火舞','女娲','妲己','嫦娥','安琪拉','小乔','杨玉环','海月','王昭君','西施'],
+  slave:  ['伽罗','公孙离','孙尚香','敖隐','狄仁杰','艾琳','虞姬','马可波罗','鲁班七号'],
+  prison: ['元流之子','大乔','孙膑','少司缘','庄周','朵莉亚','瑶','空空儿','苏烈','蔡文姬','鬼谷子'],
+};
+
 const IMG_DIR = './hero_img/';
 const IMG_EXTS = ['.png', '.jpg', '.jpeg', '.webp'];
 const STORAGE_PREFIX = 'zhy_pool_';
+const INIT_FLAG_KEY = STORAGE_PREFIX + 'initialized';
 
 // ==================== STATE ====================
 
@@ -1018,7 +1027,21 @@ document.addEventListener('keydown', (e) => {
 
 // ==================== INIT ====================
 
+function initPools() {
+  // Check if pools have been initialized before
+  if (localStorage.getItem(INIT_FLAG_KEY)) return;
+  // First visit — pre-populate each lane with default heroes
+  for (const lane of LANES) {
+    const existing = getPool(lane.id);
+    if (existing.length === 0 && DEFAULT_POOLS[lane.id]) {
+      savePool(lane.id, [...DEFAULT_POOLS[lane.id]]);
+    }
+  }
+  localStorage.setItem(INIT_FLAG_KEY, '1');
+}
+
 function init() {
+  initPools();
   renderLaneGrid();
 }
 
