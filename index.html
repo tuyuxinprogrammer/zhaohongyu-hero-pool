@@ -686,26 +686,28 @@ function getAllPools() {
 
 async function loadFromGitHub() {
   try {
-    // Also get SHA for later updates
-    const apiResp = await fetch(API_URL, {
-      headers: gitHubToken ? { Authorization: `token ${gitHubToken}` } : {}
-    });
-    if (apiResp.ok) {
-      const apiData = await apiResp.json();
-      poolFileSha = apiData.sha;
-      const content = atob(apiData.content.replace(/\n/g, ''));
-      poolData = JSON.parse(content);
+    // First priority: raw URL (always correct encoding, no auth needed)
+    const rawResp = await fetch(RAW_URL + '?t=' + Date.now());
+    if (rawResp.ok) {
+      poolData = await rawResp.json();
     } else {
-      // Fallback: try raw URL
-      const rawResp = await fetch(RAW_URL + '?t=' + Date.now());
-      if (rawResp.ok) {
-        poolData = await rawResp.json();
-      } else {
-        throw new Error('Cannot load pool data');
-      }
+      throw new Error('Cannot load from raw URL');
+    }
+
+    // Also fetch SHA for later updates (needs token)
+    if (gitHubToken) {
+      try {
+        const apiResp = await fetch(API_URL, {
+          headers: { Authorization: `token ${gitHubToken}` }
+        });
+        if (apiResp.ok) {
+          const apiData = await apiResp.json();
+          poolFileSha = apiData.sha;
+        }
+      } catch(e) { /* SHA fetch failed, will work without it */ }
     }
   } catch (e) {
-    // Last resort: localStorage cache
+    // Fallback: localStorage cache
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       try { poolData = JSON.parse(cached); } catch(e2) {}
@@ -725,11 +727,19 @@ async function loadFromGitHub() {
 
 async function saveToGitHub() {
   if (!gitHubToken) {
-    showToast('请先设置 GitHub Token（点击右上角 ⚙️）', 'error');
+    showToast('请先设置 GitHub Token（点击 ⚙️ 同步设置）', 'error');
     return false;
   }
   try {
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(poolData, null, 2))));
+    // Proper UTF-8 to base64 encoding
+    const jsonStr = JSON.stringify(poolData, null, 2);
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(jsonStr);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const content = btoa(binary);
     const body = {
       message: '🔄 更新奖池数据',
       content: content,
@@ -755,7 +765,6 @@ async function saveToGitHub() {
       throw new Error(err.message || 'API error');
     }
   } catch (e) {
-    // Save to localStorage as fallback
     localStorage.setItem(CACHE_KEY, JSON.stringify(poolData));
     showToast('同步失败: ' + e.message + '（已保存到本地）', 'error');
     return false;
