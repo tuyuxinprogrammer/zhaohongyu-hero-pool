@@ -582,7 +582,6 @@ const DEFAULT_POOLS = {
 const IMG_DIR = './hero_img/';
 const IMG_EXTS = ['.png', '.jpg', '.jpeg', '.webp'];
 const STORAGE_PREFIX = 'zhy_pool_';
-const INIT_FLAG_KEY = STORAGE_PREFIX + 'initialized';
 
 // ==================== STATE ====================
 
@@ -784,6 +783,8 @@ function goToSelect() {
 function enterLane(laneId) {
   currentLane = laneId;
   currentImgUrl = {};
+  // Ensure pool has heroes (safety check every entry)
+  ensurePoolHasHeroes(laneId);
   const lane = LANES.find(l => l.id === laneId);
   document.getElementById('poolTitle').textContent = (lane ? lane.icon + ' ' + lane.name : '') + ' 奖池';
   document.getElementById('heroNameInput').value = '';
@@ -791,7 +792,6 @@ function enterLane(laneId) {
   document.getElementById('lotteryOverlay').innerHTML = '';
   switchPage('page-pool');
   renderPool();
-  // Prefetch images for all heroes in the pool
   prefetchAllImages();
 }
 
@@ -1027,22 +1027,34 @@ document.addEventListener('keydown', (e) => {
 
 // ==================== INIT ====================
 
-function initPools() {
-  // Check if pools have been initialized before
-  if (localStorage.getItem(INIT_FLAG_KEY)) return;
-  // First visit — pre-populate each lane with default heroes
-  for (const lane of LANES) {
-    const existing = getPool(lane.id);
-    if (existing.length === 0 && DEFAULT_POOLS[lane.id]) {
-      savePool(lane.id, [...DEFAULT_POOLS[lane.id]]);
-    }
+function ensurePoolHasHeroes(laneId) {
+  const heroes = getPool(laneId);
+  if (heroes.length === 0 && DEFAULT_POOLS[laneId]) {
+    savePool(laneId, [...DEFAULT_POOLS[laneId]]);
+    return true;
   }
-  localStorage.setItem(INIT_FLAG_KEY, '1');
+  return false;
+}
+
+function initAllPools() {
+  let filled = false;
+  for (const lane of LANES) {
+    if (ensurePoolHasHeroes(lane.id)) filled = true;
+  }
+  return filled;
 }
 
 function init() {
-  initPools();
-  renderLaneGrid();
+  if (initAllPools()) {
+    // Pools were just filled — re-render
+    renderLaneGrid();
+  } else {
+    renderLaneGrid();
+  }
+  console.log('%c🏆 赵宏宇专属奖池 %c已就绪',
+    'font-size:1.2em;color:#f0d068;', 'color:#8a8678;');
+  console.log('%c数据存储于 localStorage，各分路奖池独立',
+    'color:#8a8678;');
 }
 
 init();
