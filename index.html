@@ -512,8 +512,8 @@ body {
   <div class="bg-blob"></div>
   <div class="bg-blob"></div>
   <div class="bg-blob"></div>
-  <div class="bg-portrait" style="background-image:url(bg_img/cd_2.jpg)"></div>
-  <div class="bg-portrait bottom" style="background-image:url(bg_img/cd_1.jpg)"></div>
+  <div class="bg-portrait" style="background-image:url(陈都灵/陈都灵2.png)"></div>
+  <div class="bg-portrait bottom" style="background-image:url(陈都灵/陈都灵1.png)"></div>
   <div class="bg-sparkles"></div>
 </div>
 
@@ -526,15 +526,14 @@ body {
   <!-- ====== PAGE: Lane Selection ====== -->
   <div class="page active" id="page-select">
     <div class="header">
-      <img class="header-avatar" src="bg_img/cd_2.jpg" alt="陈都灵" onerror="this.style.display='none'">
+      <img class="header-avatar" src="陈都灵/陈都灵2.png" alt="陈都灵" onerror="this.style.display='none'">
       <h1>赵宏宇专属奖池</h1>
       <p class="subtitle">✦ 陈都灵 ✦ 选择你的战场 ✦</p>
     </div>
     <div class="cd-banner">
-      <img class="cd-banner-img" src="bg_img/cd_1.jpg" alt="陈都灵" onerror="this.style.display='none'">
-      <img class="cd-banner-img" src="bg_img/cd_3.jpg" alt="陈都灵" onerror="this.style.display='none'">
-      <img class="cd-banner-img" src="bg_img/cd_6.jpg" alt="陈都灵" onerror="this.style.display='none'">
-      <img class="cd-banner-img" src="bg_img/cd_4.jpg" alt="陈都灵" onerror="this.style.display='none'">
+      <img class="cd-banner-img" src="陈都灵/陈都灵1.png" alt="陈都灵" onerror="this.style.display='none'">
+      <img class="cd-banner-img" src="陈都灵/陈都灵2.png" alt="陈都灵" onerror="this.style.display='none'">
+      <img class="cd-banner-img" src="陈都灵/陈都灵3.png" alt="陈都灵" onerror="this.style.display='none'">
     </div>
     <div class="lane-grid" id="laneGrid">
       <!-- JS populated -->
@@ -596,9 +595,7 @@ body {
 // ==================== CHEN DULING PORTRAIT ROTATION ====================
 
 const CD_PORTRAITS = [
-  'bg_img/cd_2.jpg','bg_img/cd_1.jpg','bg_img/cd_6.jpg',
-  'bg_img/cd_3.jpg','bg_img/cd_4.jpg','bg_img/cd_9.jpg',
-  'bg_img/cd_5.jpg','bg_img/cd_8.jpg','bg_img/cd_7.jpg',
+  '陈都灵/陈都灵1.png','陈都灵/陈都灵2.png','陈都灵/陈都灵3.png',
 ];
 let cdIdx = 0, cdIdxBottom = 1;
 
@@ -611,7 +608,7 @@ function rotatePortraits() {
   if (bot) bot.style.backgroundImage = `url(${CD_PORTRAITS[cdIdxBottom]})`;
 }
 
-setInterval(rotatePortraits, 12000);
+setInterval(rotatePortraits, 10000);
 
 // ==================== CONFIGURATION ====================
 
