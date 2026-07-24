@@ -69,6 +69,22 @@ body {
   100% { transform: translate(0, 0) scale(1); }
 }
 
+/* Chen Duling subtle watermark portrait */
+.bg-portrait {
+  position: absolute; right: -30px; top: 50%; transform: translateY(-50%);
+  width: 300px; height: 400px;
+  background-size: cover; background-position: center;
+  border-radius: 40px;
+  opacity: 0.09;
+  filter: blur(1.5px) brightness(1.1);
+  transition: background-image 1.5s ease, opacity 1.5s ease;
+}
+.bg-portrait.bottom {
+  left: -30px; right: auto; top: auto; bottom: -50px; transform: none;
+  width: 260px; height: 340px;
+  opacity: 0.07;
+}
+
 /* ========== Sparkle Dots ========== */
 .bg-sparkles {
   position: absolute; inset: 0;
@@ -101,6 +117,15 @@ body {
 .header {
   text-align: center; padding: 36px 0 24px;
 }
+.header-avatar {
+  width: 80px; height: 80px; margin: 0 auto 16px;
+  border-radius: 50%; object-fit: cover;
+  border: 3px solid var(--pink);
+  box-shadow: 0 4px 18px rgba(212,133,155,0.25);
+  display: block;
+  transition: transform var(--transition);
+}
+.header-avatar:hover { transform: scale(1.05); }
 .header h1 {
   font-size: clamp(1.5rem, 4.5vw, 2.3rem);
   font-weight: 800;
@@ -458,6 +483,8 @@ body {
   <div class="bg-blob"></div>
   <div class="bg-blob"></div>
   <div class="bg-blob"></div>
+  <div class="bg-portrait" style="background-image:url(bg_img/cd_2.jpg)"></div>
+  <div class="bg-portrait bottom" style="background-image:url(bg_img/cd_1.jpg)"></div>
   <div class="bg-sparkles"></div>
 </div>
 
@@ -470,8 +497,9 @@ body {
   <!-- ====== PAGE: Lane Selection ====== -->
   <div class="page active" id="page-select">
     <div class="header">
+      <img class="header-avatar" src="bg_img/cd_2.jpg" alt="陈都灵" onerror="this.style.display='none'">
       <h1>赵宏宇专属奖池</h1>
-      <p class="subtitle">✦ 选择你的战场 ✦</p>
+      <p class="subtitle">✦ 陈都灵 ✦ 选择你的战场 ✦</p>
     </div>
     <div class="lane-grid" id="laneGrid">
       <!-- JS populated -->
@@ -529,6 +557,26 @@ body {
 /* ================================================================
    赵宏宇专属奖池 — 纯前端英雄抽奖系统
    ================================================================ */
+
+// ==================== CHEN DULING PORTRAIT ROTATION ====================
+
+const CD_PORTRAITS = [
+  'bg_img/cd_2.jpg','bg_img/cd_1.jpg','bg_img/cd_6.jpg',
+  'bg_img/cd_3.jpg','bg_img/cd_4.jpg','bg_img/cd_9.jpg',
+  'bg_img/cd_5.jpg','bg_img/cd_8.jpg','bg_img/cd_7.jpg',
+];
+let cdIdx = 0, cdIdxBottom = 1;
+
+function rotatePortraits() {
+  cdIdx = (cdIdx + 1) % CD_PORTRAITS.length;
+  cdIdxBottom = (cdIdxBottom + 1) % CD_PORTRAITS.length;
+  const top = document.querySelector('.bg-portrait:not(.bottom)');
+  const bot = document.querySelector('.bg-portrait.bottom');
+  if (top) top.style.backgroundImage = `url(${CD_PORTRAITS[cdIdx]})`;
+  if (bot) bot.style.backgroundImage = `url(${CD_PORTRAITS[cdIdxBottom]})`;
+}
+
+setInterval(rotatePortraits, 12000);
 
 // ==================== CONFIGURATION ====================
 
