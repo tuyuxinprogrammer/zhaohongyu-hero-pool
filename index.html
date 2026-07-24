@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://raw.githubusercontent.com">
+<link rel="preconnect" href="https://tuyuxinprogrammer.github.io">
+<link rel="dns-prefetch" href="https://tuyuxinprogrammer.github.io">
 <title>赵宏宇专属奖池</title>
 <style>
 /* ========== CSS Reset & Variables ========== */
@@ -773,41 +776,35 @@ async function saveToGitHub() {
 
 // ==================== IMAGE RESOLVER ====================
 
-function buildImagePaths(heroName, ext) {
-  const paths = [];
-  paths.push(IMG_DIR + heroName + ext);
-  if (currentLane) {
-    const lane = LANES.find(l => l.id === currentLane);
-    if (lane) {
-      paths.push(IMG_DIR + lane.dir + '/' + heroName + ext);
-      paths.push('./' + lane.dir + '/' + heroName + ext);
-    }
-  }
-  for (const l of LANES) {
-    if (l.id !== currentLane) paths.push(IMG_DIR + l.dir + '/' + heroName + ext);
-  }
-  for (const l of LANES) {
-    if (l.id !== currentLane) paths.push('./' + l.dir + '/' + heroName + ext);
-  }
-  return paths;
-}
-
+/**
+ * Optimized probe: try .png directly first (99% of images), then fall back.
+ * All hero images are .png in hero_img/ — no need to brute-force 24 combinations.
+ */
 function probeImage(heroName) {
   return new Promise((resolve) => {
-    const combos = [];
-    for (const ext of IMG_EXTS) {
-      for (const path of buildImagePaths(heroName, ext)) { combos.push(path); }
-    }
-    let idx = 0;
-    function tryNext() {
-      if (idx >= combos.length) { currentImgUrl[heroName] = null; resolve(null); return; }
-      const url = combos[idx];
-      const img = new Image();
-      img.onload = () => { currentImgUrl[heroName] = url; resolve(url); };
-      img.onerror = () => { idx++; tryNext(); };
-      img.src = url;
-    }
-    tryNext();
+    // Priority 1: hero_img/<name>.png — covers virtually all cases
+    const fastPath = IMG_DIR + heroName + '.png';
+    const img = new Image();
+    img.onload = () => { currentImgUrl[heroName] = fastPath; resolve(fastPath); };
+    img.onerror = () => {
+      // Priority 2: try other extensions in hero_img/
+      let extIdx = 0;
+      const exts = ['.jpg', '.jpeg', '.webp'];
+      function tryExt() {
+        if (extIdx >= exts.length) {
+          currentImgUrl[heroName] = null;
+          resolve(null);
+          return;
+        }
+        const url = IMG_DIR + heroName + exts[extIdx];
+        const img2 = new Image();
+        img2.onload = () => { currentImgUrl[heroName] = url; resolve(url); };
+        img2.onerror = () => { extIdx++; tryExt(); };
+        img2.src = url;
+      }
+      tryExt();
+    };
+    img.src = fastPath;
   });
 }
 
@@ -894,8 +891,10 @@ function enterLane(laneId) {
 
 async function prefetchAllImages() {
   const heroes = getPool(currentLane);
-  for (const name of heroes) {
-    if (currentImgUrl[name] === undefined) await probeImage(name);
+  // Parallel probe for all uncached heroes
+  const uncached = heroes.filter(name => currentImgUrl[name] === undefined);
+  if (uncached.length > 0) {
+    await Promise.all(uncached.map(name => probeImage(name)));
   }
   renderHeroList(heroes);
 }
