@@ -69,20 +69,26 @@ body {
   100% { transform: translate(0, 0) scale(1); }
 }
 
-/* Chen Duling subtle watermark portrait */
+/* Chen Duling portrait watermark */
 .bg-portrait {
-  position: absolute; right: -30px; top: 50%; transform: translateY(-50%);
-  width: 300px; height: 400px;
-  background-size: cover; background-position: center;
-  border-radius: 40px;
-  opacity: 0.09;
-  filter: blur(1.5px) brightness(1.1);
+  position: absolute; right: 10px; top: 15%;
+  width: 220px; height: 300px;
+  background-size: cover; background-position: center top;
+  border-radius: 24px;
+  opacity: 0.18;
+  filter: drop-shadow(0 8px 24px rgba(180,140,160,0.2));
   transition: background-image 1.5s ease, opacity 1.5s ease;
+  border: 1px solid rgba(232,160,180,0.15);
 }
 .bg-portrait.bottom {
-  left: -30px; right: auto; top: auto; bottom: -50px; transform: none;
-  width: 260px; height: 340px;
-  opacity: 0.07;
+  left: 15px; right: auto; top: auto; bottom: 10%;
+  width: 200px; height: 270px;
+  opacity: 0.16;
+}
+
+@media (max-width: 480px) {
+  .bg-portrait { width: 140px; height: 200px; right: -10px; opacity: 0.14; }
+  .bg-portrait.bottom { width: 130px; height: 180px; left: -10px; opacity: 0.12; }
 }
 
 /* ========== Sparkle Dots ========== */
@@ -118,14 +124,34 @@ body {
   text-align: center; padding: 36px 0 24px;
 }
 .header-avatar {
-  width: 80px; height: 80px; margin: 0 auto 16px;
+  width: 96px; height: 96px; margin: 0 auto 18px;
   border-radius: 50%; object-fit: cover;
-  border: 3px solid var(--pink);
-  box-shadow: 0 4px 18px rgba(212,133,155,0.25);
+  border: 3px solid rgba(232,160,180,0.5);
+  box-shadow: 0 4px 24px rgba(212,133,155,0.3);
   display: block;
   transition: transform var(--transition);
 }
-.header-avatar:hover { transform: scale(1.05); }
+.header-avatar:hover { transform: scale(1.08); }
+
+/* Chen Duling decorative banner */
+.cd-banner {
+  display: flex; gap: 10px; justify-content: center;
+  margin: 0 auto 20px; max-width: 500px;
+  flex-wrap: wrap;
+}
+.cd-banner-img {
+  width: 100px; height: 100px; object-fit: cover;
+  border-radius: var(--radius);
+  border: 2px solid rgba(232,160,180,0.3);
+  box-shadow: 0 2px 12px rgba(200,150,170,0.18);
+  transition: all var(--transition);
+  cursor: default;
+}
+.cd-banner-img:hover {
+  transform: translateY(-4px) scale(1.03);
+  border-color: var(--pink);
+  box-shadow: 0 6px 20px rgba(212,133,155,0.3);
+}
 .header h1 {
   font-size: clamp(1.5rem, 4.5vw, 2.3rem);
   font-weight: 800;
@@ -465,6 +491,9 @@ body {
 @media (max-width: 480px) {
   .container { padding: 12px 10px 40px; }
   .header { padding: 24px 0 14px; }
+  .header-avatar { width: 72px; height: 72px; }
+  .cd-banner { gap: 6px; margin-bottom: 16px; }
+  .cd-banner-img { width: 68px; height: 68px; }
   .lane-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .lane-card { padding: 20px 10px 18px; }
   .lane-icon { width: 44px; height: 44px; font-size: 1.4rem; }
@@ -500,6 +529,12 @@ body {
       <img class="header-avatar" src="bg_img/cd_2.jpg" alt="陈都灵" onerror="this.style.display='none'">
       <h1>赵宏宇专属奖池</h1>
       <p class="subtitle">✦ 陈都灵 ✦ 选择你的战场 ✦</p>
+    </div>
+    <div class="cd-banner">
+      <img class="cd-banner-img" src="bg_img/cd_1.jpg" alt="陈都灵" onerror="this.style.display='none'">
+      <img class="cd-banner-img" src="bg_img/cd_3.jpg" alt="陈都灵" onerror="this.style.display='none'">
+      <img class="cd-banner-img" src="bg_img/cd_6.jpg" alt="陈都灵" onerror="this.style.display='none'">
+      <img class="cd-banner-img" src="bg_img/cd_4.jpg" alt="陈都灵" onerror="this.style.display='none'">
     </div>
     <div class="lane-grid" id="laneGrid">
       <!-- JS populated -->
