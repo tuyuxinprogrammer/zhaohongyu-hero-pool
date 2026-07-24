@@ -663,7 +663,7 @@ const DEFAULT_POOLS = {
 
 const IMG_DIR = './hero_img/';
 const IMG_EXTS = ['.png', '.jpg', '.jpeg', '.webp'];
-const CACHE_KEY = 'zhy_pool_cache';
+const CACHE_KEY = 'zhy_pool_cache_v2';
 
 // ==================== STATE ====================
 
@@ -1133,6 +1133,8 @@ document.addEventListener('keydown', (e) => {
 // ==================== INIT ====================
 
 async function init() {
+  // Clean old corrupted cache
+  localStorage.removeItem('zhy_pool_cache');
   showToast('正在加载数据…', 'info');
   await loadFromGitHub();
   document.getElementById('toastContainer').innerHTML = '';
