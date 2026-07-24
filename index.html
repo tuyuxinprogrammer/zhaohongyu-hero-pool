@@ -48,13 +48,24 @@ body {
 .bg-layer {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
 }
-.bg-gradient {
+.bg-slide {
   position: absolute; inset: 0;
-  background:
-    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(212,168,67,0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 60% at 80% 70%, rgba(52,152,219,0.05) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 50% at 50% 50%, rgba(155,89,182,0.04) 0%, transparent 60%),
-    linear-gradient(180deg, #0a0a18 0%, #0d0d22 30%, #101028 60%, #0a0a18 100%);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
+}
+.bg-slide.active {
+  opacity: 1;
+}
+.bg-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    rgba(10,10,24,0.82) 0%,
+    rgba(13,13,34,0.78) 30%,
+    rgba(16,16,40,0.80) 60%,
+    rgba(10,10,24,0.85) 100%);
 }
 .bg-particles {
   position: absolute; inset: 0;
@@ -489,7 +500,9 @@ body {
 
 <!-- Background -->
 <div class="bg-layer">
-  <div class="bg-gradient"></div>
+  <div class="bg-slide active" id="bgSlide1"></div>
+  <div class="bg-slide" id="bgSlide2"></div>
+  <div class="bg-overlay"></div>
   <div class="bg-particles"></div>
 </div>
 
@@ -561,6 +574,51 @@ body {
 /* ================================================================
    赵宏宇专属奖池 — 纯前端英雄抽奖系统
    ================================================================ */
+
+// ==================== BACKGROUND SLIDESHOW ====================
+
+const BG_IMAGES = [
+  'bg_img/cd_1.jpg', 'bg_img/cd_2.jpg', 'bg_img/cd_3.jpg',
+  'bg_img/cd_4.jpg', 'bg_img/cd_5.jpg', 'bg_img/cd_6.jpg',
+  'bg_img/cd_7.jpg', 'bg_img/cd_8.jpg', 'bg_img/cd_9.jpg',
+];
+
+let bgIndex = 0;
+let bgActive = 1; // 1 = slide1 active, 2 = slide2 active
+
+function startBgSlideshow() {
+  // Preload first image
+  const slide1 = document.getElementById('bgSlide1');
+  const slide2 = document.getElementById('bgSlide2');
+  slide1.style.backgroundImage = `url(${BG_IMAGES[0]})`;
+  if (BG_IMAGES.length > 1) {
+    slide2.style.backgroundImage = `url(${BG_IMAGES[1]})`;
+    bgIndex = 1;
+  }
+  // Rotate every 8 seconds
+  if (BG_IMAGES.length > 1) {
+    setInterval(rotateBg, 8000);
+  }
+}
+
+function rotateBg() {
+  bgIndex = (bgIndex + 1) % BG_IMAGES.length;
+  const nextImage = BG_IMAGES[bgIndex];
+  const slide1 = document.getElementById('bgSlide1');
+  const slide2 = document.getElementById('bgSlide2');
+
+  if (bgActive === 1) {
+    slide2.style.backgroundImage = `url(${nextImage})`;
+    slide2.classList.add('active');
+    slide1.classList.remove('active');
+    bgActive = 2;
+  } else {
+    slide1.style.backgroundImage = `url(${nextImage})`;
+    slide1.classList.add('active');
+    slide2.classList.remove('active');
+    bgActive = 1;
+  }
+}
 
 // ==================== CONFIGURATION ====================
 
@@ -1045,8 +1103,8 @@ function initAllPools() {
 }
 
 function init() {
+  startBgSlideshow();
   if (initAllPools()) {
-    // Pools were just filled — re-render
     renderLaneGrid();
   } else {
     renderLaneGrid();
