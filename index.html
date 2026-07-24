@@ -885,18 +885,18 @@ function enterLane(laneId) {
   document.getElementById('resultArea').innerHTML = '';
   document.getElementById('lotteryOverlay').innerHTML = '';
   switchPage('page-pool');
-  renderPool();
-  prefetchAllImages();
+  renderPool();        // Show hero names immediately
+  prefetchAllImages();  // Load images in background
 }
 
-async function prefetchAllImages() {
+function prefetchAllImages() {
   const heroes = getPool(currentLane);
-  // Parallel probe for all uncached heroes
   const uncached = heroes.filter(name => currentImgUrl[name] === undefined);
   if (uncached.length > 0) {
-    await Promise.all(uncached.map(name => probeImage(name)));
+    Promise.all(uncached.map(name => probeImage(name))).then(() => {
+      renderHeroList(heroes); // Re-render when images arrive
+    });
   }
-  renderHeroList(heroes);
 }
 
 // ==================== LANE GRID ====================
@@ -1134,15 +1134,30 @@ document.addEventListener('keydown', (e) => {
 async function init() {
   // Clean old corrupted cache
   localStorage.removeItem('zhy_pool_cache');
-  showToast('正在加载数据…', 'info');
-  await loadFromGitHub();
-  document.getElementById('toastContainer').innerHTML = '';
-  renderLaneGrid();
-  if (!gitHubToken) {
-    setTimeout(() => showToast('提示：设置 Token 后可跨设备同步', 'info'), 800);
+
+  // Show page immediately with cached or default data
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) {
+    try { poolData = JSON.parse(cached); } catch(e) {}
   }
+  if (!poolData || Object.keys(poolData).length === 0) {
+    poolData = { ...DEFAULT_POOLS };
+  }
+  for (const lane of LANES) {
+    if (!poolData[lane.id]) poolData[lane.id] = [];
+  }
+  dataLoaded = true;
+  renderLaneGrid();
+
+  // Silently refresh from GitHub in background
+  loadFromGitHub().then(() => {
+    renderLaneGrid();
+    if (!gitHubToken) {
+      setTimeout(() => showToast('提示：设置 Token 后可跨设备同步', 'info'), 800);
+    }
+  });
+
   console.log('%c🏆 赵宏宇专属奖池 %c已就绪', 'font-size:1.2em;color:#d4859b;', 'color:#b8a0ae;');
-  console.log('%c数据来源: GitHub pool_data.json', 'color:#b8a0ae;');
 }
 
 init();
