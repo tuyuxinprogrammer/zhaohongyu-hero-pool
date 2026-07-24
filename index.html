@@ -393,6 +393,30 @@ body {
   border-color: var(--danger); box-shadow: 0 0 8px rgba(239,83,80,0.12);
 }
 
+.btn-settings {
+  background: rgba(255,255,255,0.55); color: var(--text-light);
+  border: 1px solid var(--card-border);
+}
+.btn-settings:hover {
+  border-color: var(--pink); box-shadow: 0 0 8px var(--rose-glow);
+}
+
+.file-input {
+  padding: 8px 12px; font-size: 0.82rem;
+  background: rgba(255,255,255,0.55); color: var(--text-dim);
+  border: 1px solid rgba(232,160,180,0.18); border-radius: 999px;
+  outline: none; cursor: pointer; min-width: 180px;
+}
+.file-input::file-selector-button {
+  padding: 6px 14px; border: none; border-radius: 999px;
+  background: var(--pink-light); color: var(--pink-dark);
+  font-weight: 600; cursor: pointer; margin-right: 8px;
+  transition: background var(--transition);
+}
+.file-input::file-selector-button:hover {
+  background: var(--pink);
+}
+
 /* ========== Hero List ========== */
 .hero-list-section {
   background: var(--card-bg);
@@ -499,6 +523,7 @@ body {
   .lane-icon { width: 44px; height: 44px; font-size: 1.4rem; }
   .btn-lottery { padding: 12px 36px; font-size: 1rem; }
   .input-row { flex-direction: column; }
+  .file-input { min-width: auto; width: 100%; }
   .btn-row { flex-direction: column; }
   .btn-sm { width: 100%; text-align: center; }
 }
@@ -562,11 +587,13 @@ body {
       <h3>📋 奖池管理</h3>
       <div class="input-row">
         <input type="text" id="heroNameInput" placeholder="输入英雄名称…" maxlength="60" autocomplete="off">
+        <input type="file" id="heroImageInput" accept="image/png,image/jpeg,image/webp" class="file-input" title="可选：上传英雄图片">
         <button class="btn-sm btn-add" onclick="addHero()">➕ 添加英雄</button>
         <button class="btn-sm btn-del" onclick="deleteHero()">➖ 删除英雄</button>
       </div>
       <div class="btn-row">
         <button class="btn-sm btn-clear" onclick="confirmClearPool()">🗑 清空奖池</button>
+        <button class="btn-sm btn-settings" onclick="openSettings()" title="跨设备同步设置">⚙️ 同步设置</button>
       </div>
     </div>
 
@@ -589,7 +616,8 @@ body {
 
 <script>
 /* ================================================================
-   赵宏宇专属奖池 — 纯前端英雄抽奖系统
+   赵宏宇专属奖池 — 跨设备同步版
+   GitHub API + pool_data.json 实现多设备数据一致
    ================================================================ */
 
 // ==================== CHEN DULING PORTRAIT ROTATION ====================
@@ -612,6 +640,13 @@ setInterval(rotatePortraits, 10000);
 
 // ==================== CONFIGURATION ====================
 
+const REPO_OWNER = 'tuyuxinprogrammer';
+const REPO_NAME = 'zhaohongyu-hero-pool';
+const DATA_FILE = 'pool_data.json';
+const RAW_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${DATA_FILE}`;
+const API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DATA_FILE}`;
+const IMG_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/hero_img/`;
+
 const LANES = [
   { id: 'jungle', name: '打野',   icon: '🌿', cls: 'jungle', dir: '打野'   },
   { id: 'mid',    name: '中单',   icon: '⚡', cls: 'mid',    dir: '中单'   },
@@ -628,24 +663,103 @@ const DEFAULT_POOLS = {
 
 const IMG_DIR = './hero_img/';
 const IMG_EXTS = ['.png', '.jpg', '.jpeg', '.webp'];
-const STORAGE_PREFIX = 'zhy_pool_';
+const CACHE_KEY = 'zhy_pool_cache';
 
 // ==================== STATE ====================
 
 let currentLane = null;
 let currentImgUrl = {};
+let poolData = {};        // { jungle: [...], mid: [...], slave: [...], prison: [...] }
+let dataLoaded = false;
+let gitHubToken = localStorage.getItem('zhy_gh_token') || '';
+let poolFileSha = null;   // SHA of pool_data.json for API updates
 
-// ==================== STORAGE HELPERS ====================
-
-function storageKey(laneId) { return STORAGE_PREFIX + laneId; }
+// ==================== DATA LAYER ====================
 
 function getPool(laneId) {
-  try { const raw = localStorage.getItem(storageKey(laneId)); return raw ? JSON.parse(raw) : []; }
-  catch (e) { return []; }
+  return poolData[laneId] || [];
 }
 
-function savePool(laneId, heroes) {
-  localStorage.setItem(storageKey(laneId), JSON.stringify(heroes));
+function getAllPools() {
+  return { ...poolData };
+}
+
+async function loadFromGitHub() {
+  try {
+    // Also get SHA for later updates
+    const apiResp = await fetch(API_URL, {
+      headers: gitHubToken ? { Authorization: `token ${gitHubToken}` } : {}
+    });
+    if (apiResp.ok) {
+      const apiData = await apiResp.json();
+      poolFileSha = apiData.sha;
+      const content = atob(apiData.content.replace(/\n/g, ''));
+      poolData = JSON.parse(content);
+    } else {
+      // Fallback: try raw URL
+      const rawResp = await fetch(RAW_URL + '?t=' + Date.now());
+      if (rawResp.ok) {
+        poolData = await rawResp.json();
+      } else {
+        throw new Error('Cannot load pool data');
+      }
+    }
+  } catch (e) {
+    // Last resort: localStorage cache
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try { poolData = JSON.parse(cached); } catch(e2) {}
+    }
+    // If still empty, use defaults
+    if (!poolData || Object.keys(poolData).length === 0) {
+      poolData = { ...DEFAULT_POOLS };
+    }
+  }
+  // Ensure all 4 lanes exist
+  for (const lane of LANES) {
+    if (!poolData[lane.id]) poolData[lane.id] = [];
+  }
+  localStorage.setItem(CACHE_KEY, JSON.stringify(poolData));
+  dataLoaded = true;
+}
+
+async function saveToGitHub() {
+  if (!gitHubToken) {
+    showToast('请先设置 GitHub Token（点击右上角 ⚙️）', 'error');
+    return false;
+  }
+  try {
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(poolData, null, 2))));
+    const body = {
+      message: '🔄 更新奖池数据',
+      content: content,
+    };
+    if (poolFileSha) body.sha = poolFileSha;
+
+    const resp = await fetch(API_URL, {
+      method: 'PUT',
+      headers: {
+        Authorization: `token ${gitHubToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (resp.ok) {
+      const result = await resp.json();
+      poolFileSha = result.content.sha;
+      localStorage.setItem(CACHE_KEY, JSON.stringify(poolData));
+      return true;
+    } else {
+      const err = await resp.json();
+      throw new Error(err.message || 'API error');
+    }
+  } catch (e) {
+    // Save to localStorage as fallback
+    localStorage.setItem(CACHE_KEY, JSON.stringify(poolData));
+    showToast('同步失败: ' + e.message + '（已保存到本地）', 'error');
+    return false;
+  }
 }
 
 // ==================== IMAGE RESOLVER ====================
@@ -759,7 +873,6 @@ function goToSelect() {
 
 function enterLane(laneId) {
   currentLane = laneId; currentImgUrl = {};
-  ensurePoolHasHeroes(laneId);
   const lane = LANES.find(l => l.id === laneId);
   document.getElementById('poolTitle').textContent = (lane ? lane.icon + ' ' + lane.name : '') + ' 奖池';
   document.getElementById('heroNameInput').value = '';
@@ -880,16 +993,65 @@ function showResult(heroName) {
 
 // ==================== POOL MANAGEMENT ====================
 
-function addHero() {
+function savePoolAndSync(laneId) {
+  localStorage.setItem(CACHE_KEY, JSON.stringify(poolData));
+  saveToGitHub();
+}
+
+async function addHero() {
   if (!currentLane) return;
   const input = document.getElementById('heroNameInput');
+  const fileInput = document.getElementById('heroImageInput');
   const rawName = input.value.trim();
   if (!rawName) { showToast('请输入英雄名称', 'error'); return; }
   const heroes = getPool(currentLane);
   if (heroes.includes(rawName)) { showToast('「' + rawName + '」已在奖池中', 'info'); input.value = ''; return; }
+
+  // Handle image upload if provided
+  if (fileInput && fileInput.files && fileInput.files[0]) {
+    if (!gitHubToken) {
+      showToast('需要设置 GitHub Token 才能上传图片', 'error');
+      return;
+    }
+    const file = fileInput.files[0];
+    const ext = file.name.split('.').pop().toLowerCase();
+    const imgPath = 'hero_img/' + rawName + '.' + ext;
+    try {
+      showToast('正在上传图片…', 'info');
+      const reader = new FileReader();
+      const base64Content = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const imgResp = await fetch(IMG_API_URL + rawName + '.' + ext, {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${gitHubToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: '🖼️ 上传 ' + rawName + ' 图片',
+          content: base64Content,
+        }),
+      });
+      if (!imgResp.ok && imgResp.status !== 422) {
+        // 422 = file already exists, that's OK
+        const err = await imgResp.json();
+        throw new Error(err.message || '图片上传失败');
+      }
+    } catch (e) {
+      showToast('图片上传失败: ' + e.message, 'error');
+      return;
+    }
+  }
+
   heroes.push(rawName);
-  savePool(currentLane, heroes);
+  poolData[currentLane] = heroes;
+  savePoolAndSync(currentLane);
   input.value = '';
+  if (fileInput) fileInput.value = '';
   showToast('「' + rawName + '」已加入奖池', 'success');
   prefetchHeroImage(rawName);
   renderPool();
@@ -904,7 +1066,8 @@ function deleteHero() {
   const idx = heroes.indexOf(rawName);
   if (idx === -1) { showToast('「' + rawName + '」不在奖池中', 'error'); return; }
   heroes.splice(idx, 1);
-  savePool(currentLane, heroes);
+  poolData[currentLane] = heroes;
+  savePoolAndSync(currentLane);
   input.value = '';
   showToast('「' + rawName + '」已从奖池移除', 'info');
   renderPool();
@@ -921,11 +1084,33 @@ function confirmClearPool() {
 }
 
 function clearPool() {
-  savePool(currentLane, []);
+  poolData[currentLane] = [];
+  savePoolAndSync(currentLane);
   currentImgUrl = {};
   renderPool();
   document.getElementById('resultArea').innerHTML = '';
   showToast('奖池已清空', 'info');
+}
+
+// ==================== SETTINGS ====================
+
+function openSettings() {
+  showModal('⚙️ 跨设备同步设置',
+    '<p style="text-align:left;font-size:0.82rem;">在其他设备上也能获得相同的奖池数据。<br><br>1. 去 <a href="https://github.com/settings/tokens" target="_blank" style="color:var(--rose);">github.com/settings/tokens</a> 创建 Token（勾选 <b>repo</b> 权限）<br>2. 粘贴到下方输入框</p>' +
+    '<input id="tokenInput" type="password" placeholder="ghp_xxxxxxxxxxxx" style="width:100%;padding:10px;border-radius:999px;border:1px solid rgba(232,160,180,0.3);margin-bottom:8px;font-size:0.85rem" value="' + escapeHTML(gitHubToken) + '">' +
+    '<p id="tokenStatus" style="font-size:0.75rem;color:var(--text-dim);margin-bottom:6px;">' + (gitHubToken ? '✅ Token 已设置 — 数据将自动同步' : '⚠️ 未设置 Token — 只能查看，无法同步修改') + '</p>',
+    [
+      { label: '清除 Token', cls: 'btn-clear', action: () => { gitHubToken = ''; localStorage.removeItem('zhy_gh_token'); showToast('Token 已清除', 'info'); } },
+      { label: '💾 保存', cls: 'btn-add', action: () => {
+        const val = document.getElementById('tokenInput').value.trim();
+        if (val) {
+          gitHubToken = val;
+          localStorage.setItem('zhy_gh_token', val);
+          showToast('Token 已保存 ✅ 修改将同步到全设备', 'success');
+        }
+      }},
+    ]
+  );
 }
 
 // ==================== KEYBOARD ====================
@@ -938,25 +1123,16 @@ document.addEventListener('keydown', (e) => {
 
 // ==================== INIT ====================
 
-function ensurePoolHasHeroes(laneId) {
-  const heroes = getPool(laneId);
-  if (heroes.length === 0 && DEFAULT_POOLS[laneId]) {
-    savePool(laneId, [...DEFAULT_POOLS[laneId]]);
-    return true;
-  }
-  return false;
-}
-
-function initAllPools() {
-  let filled = false;
-  for (const lane of LANES) { if (ensurePoolHasHeroes(lane.id)) filled = true; }
-  return filled;
-}
-
-function init() {
-  initAllPools();
+async function init() {
+  showToast('正在加载数据…', 'info');
+  await loadFromGitHub();
+  document.getElementById('toastContainer').innerHTML = '';
   renderLaneGrid();
+  if (!gitHubToken) {
+    setTimeout(() => showToast('提示：设置 Token 后可跨设备同步', 'info'), 800);
+  }
   console.log('%c🏆 赵宏宇专属奖池 %c已就绪', 'font-size:1.2em;color:#d4859b;', 'color:#b8a0ae;');
+  console.log('%c数据来源: GitHub pool_data.json', 'color:#b8a0ae;');
 }
 
 init();
